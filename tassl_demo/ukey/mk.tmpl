@@ -1,0 +1,12 @@
+SKF_LIBNAME=
+SKF_INC=./
+SKF_LIB=./
+PROGRAMES="ukey_util"
+
+if [ $1"X" == "cleanX" ]; then
+printf "cleaning the programe %s.....\n" $PROGRAMES
+        rm -rf ${PROGRAMES}
+else
+printf "compiling the programe.....\n"
+gcc -ggdb3 -O0 -o ukey_util ukey_util.c -I${INC_DIR} -I${SKF_INC} ${LIB_DIR}/libssl.a ${LIB_DIR}/libcrypto.a -L${SKF_LIB} -Wl,-rpath=${SKF_LIB} -l${SKF_LIBNAME} -ldl -lpthread
+fi
