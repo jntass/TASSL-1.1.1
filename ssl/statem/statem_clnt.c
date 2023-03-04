@@ -1979,11 +1979,13 @@ MSG_PROCESS_RETURN tls_process_server_certificate(SSL *s, PACKET *pkt)
 
         /* Build encrypt certificate chain */
         if ((sk_enc = sk_X509_new_null()) == NULL) {
+            x_enc = NULL;
             SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_TLS_PROCESS_SERVER_CERTIFICATE,
                         ERR_R_MALLOC_FAILURE);
             goto err;
         }
         if (!sk_X509_push(sk_enc, x_enc)) {
+            x_enc = NULL;
             SSLfatal(s, SSL_AD_INTERNAL_ERROR,
                         SSL_F_TLS_PROCESS_SERVER_CERTIFICATE,
                         ERR_R_MALLOC_FAILURE);
@@ -1992,6 +1994,7 @@ MSG_PROCESS_RETURN tls_process_server_certificate(SSL *s, PACKET *pkt)
         X509_up_ref(x_enc);
         for (i = 1; i < sk_X509_num(sk); i++) {
             if (!sk_X509_push(sk_enc, sk_X509_value(sk, i))) {
+                x_enc = NULL;
                 SSLfatal(s, SSL_AD_INTERNAL_ERROR,
                             SSL_F_TLS_PROCESS_SERVER_CERTIFICATE,
                             ERR_R_MALLOC_FAILURE);
@@ -2003,6 +2006,7 @@ MSG_PROCESS_RETURN tls_process_server_certificate(SSL *s, PACKET *pkt)
         /* Verify encrypt certificate */
         i = ssl_verify_cert_chain(s, sk_enc);
         if (s->verify_mode != SSL_VERIFY_NONE && i <= 0) {
+            x_enc = NULL;
             SSLfatal(s, ssl_x509err2alert(s->verify_result),
                         SSL_F_TLS_PROCESS_SERVER_CERTIFICATE,
                         SSL_R_CERTIFICATE_VERIFY_FAILED);
@@ -2010,6 +2014,7 @@ MSG_PROCESS_RETURN tls_process_server_certificate(SSL *s, PACKET *pkt)
         }
         ERR_clear_error();          /* but we keep s->verify_result */
         if (i > 1) {
+            x_enc = NULL;
             SSLfatal(s, SSL_AD_HANDSHAKE_FAILURE,
                         SSL_F_TLS_PROCESS_SERVER_CERTIFICATE, i);
             goto err;
