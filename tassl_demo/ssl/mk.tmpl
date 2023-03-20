@@ -1,4 +1,4 @@
-PROGRAMES="sslsvr sslcli ssltest"
+PROGRAMES="sslsvr sslcli ssltest engine_util"
 
 if [ $1"X" == "cleanX" ]; then
 printf "cleaning the programe %s.....\n" $PROGRAMES
@@ -8,4 +8,5 @@ printf "compiling the programe.....\n"
 gcc -ggdb3 -O0 -o sslsvr sslsvr.c -I${INC_DIR}  ${LIB_DIR}/libssl.a ${LIB_DIR}/libcrypto.a  -ldl -lpthread
 gcc -ggdb3 -O0 -o sslcli sslcli.c -I${INC_DIR}  ${LIB_DIR}/libssl.a ${LIB_DIR}/libcrypto.a  -ldl -lpthread
 gcc -ggdb3 -O0 -o ssltest ssltest.c -I${INC_DIR}  ${LIB_DIR}/libssl.a ${LIB_DIR}/libcrypto.a  -ldl -lpthread
+gcc -ggdb3 -O0 -o engine_util engine_util.c -I${INC_DIR}  ${LIB_DIR}/libssl.a ${LIB_DIR}/libcrypto.a  -ldl -lpthread
 fi

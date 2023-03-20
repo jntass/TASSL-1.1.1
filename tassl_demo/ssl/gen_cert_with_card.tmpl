@@ -1,0 +1,91 @@
+
+KEY_INDEX="false"
+ISSUE_CRT="false"
+
+# pick up any command line args
+for i
+do
+case "$i" in
+--key_index*)
+    KEY_INDEX="true";;
+--issue_crt*)
+    ISSUE_CRT="true";;
+*)
+    echo "unknow options"
+    exit;;
+esac
+done
+
+RM=/bin/rm
+MKDIR=/bin/mkdir
+
+CERTS_DIR=./certs
+
+$RM -rf $CERTS_DIR
+$MKDIR -p $CERTS_DIR
+
+OPENSSL_CNF=${OPENSSL_DIR}/tassl_demo/cert/openssl.cnf
+
+CA_EXT=v3_ca
+SIGN_EXT=v3_req
+ENC_EXT=v3enc_req
+
+ENGINE=tasscard_sm2
+
+TEST_CA_DN="/C=CN/ST=BJ/L=HaiDian/O=JNTA/OU=BSRC of TASS/CN=CA_commoname/"
+TEST_SIGN_DN="/C=CN/ST=BJ/L=HaiDian/O=JNTA/OU=BSRC of TASS/CN=S_sign_commoname/"
+TEST_ENC_DN="/C=CN/ST=BJ/L=HaiDian/O=JNTA/OU=BSRC of TASS/CN=S_enc_commoname/"
+
+TEST_CA_KEY=${CERTS_DIR}/CA.key
+if [ "$KEY_INDEX" = "true" ]; then
+	TEST_SIGN_KEY=20
+	TEST_ENC_KEY=21
+else
+	TEST_SIGN_KEY=${CERTS_DIR}/SS_SM2_CARD.key
+	TEST_ENC_KEY=${CERTS_DIR}/SE_SM2_CARD.key
+fi
+
+TEST_CA_CSR=${CERTS_DIR}/CA.csr
+TEST_SIGN_CSR=${CERTS_DIR}/SS_SM2_CARD.csr
+TEST_ENC_CSR=${CERTS_DIR}/SE_SM2_CARD.csr
+
+TEST_CA_CRT=${CERTS_DIR}/CA.crt
+TEST_SIGN_CRT=${CERTS_DIR}/SS_SM2_CARD.crt
+TEST_ENC_CRT=${CERTS_DIR}/SE_SM2_CARD.crt
+
+# Generating a CA key/certificate involves the following main steps
+# 1. Generating key
+# 2. Generating a certificate request
+# 3. Signing the certificate request
+if [ "$ISSUE_CRT" = "true" ]; then
+    ./engine_util --GenKey -key $TEST_CA_KEY
+
+    ./engine_util --SignCSR -key $TEST_CA_KEY -csr $TEST_CA_CSR -dn "$TEST_CA_DN"
+
+    ./engine_util --SignCRT -csr $TEST_CA_CSR -crt $TEST_CA_CRT -ca_key $TEST_CA_KEY -extfile $OPENSSL_CNF -ext $CA_EXT
+fi
+
+# Generating a sign key/certificate involves the following main steps
+# 1. Generating key(by card)
+# 2. Generating a certificate request(signed by card)
+# 3. Signing the certificate request
+./engine_util --GenKey -key $TEST_SIGN_KEY -engine $ENGINE
+
+./engine_util --SignCSR -key $TEST_SIGN_KEY -csr $TEST_SIGN_CSR -dn "$TEST_SIGN_DN" -engine $ENGINE
+
+if [ "$ISSUE_CRT" = "true" ]; then
+    ./engine_util --SignCRT -csr $TEST_SIGN_CSR -crt $TEST_SIGN_CRT -ca $TEST_CA_CRT -ca_key $TEST_CA_KEY -extfile $OPENSSL_CNF -ext $SIGN_EXT
+fi
+
+# Generating an enc key/certificate involves the following main steps
+# 1. Generating key(by card)
+# 2. Generating a certificate request(signed by card)
+# 3. Signing the certificate request
+if [ "$ISSUE_CRT" = "true" ]; then
+    ./engine_util --GenKey -key $TEST_ENC_KEY -engine $ENGINE
+
+    ./engine_util --SignCSR -key $TEST_ENC_KEY -csr $TEST_ENC_CSR -dn "$TEST_ENC_DN" -engine $ENGINE
+
+    ./engine_util --SignCRT -csr $TEST_ENC_CSR -crt $TEST_ENC_CRT -ca $TEST_CA_CRT -ca_key $TEST_CA_KEY -extfile $OPENSSL_CNF -ext $ENC_EXT
+fi
+

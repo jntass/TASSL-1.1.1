@@ -552,6 +552,8 @@ GEN_SM2_CERT_FILE=$(DESTDIR)$(INSTALLTOP)/tassl_demo/cert/gen_sm2_cert
 SSL_MK_FILE=$(DESTDIR)$(INSTALLTOP)/tassl_demo/ssl/mk
 CRYPTO_MK_FILE=$(DESTDIR)$(INSTALLTOP)/tassl_demo/crypto/mk
 UKEY_MK_FILE=$(DESTDIR)$(INSTALLTOP)/tassl_demo/ukey/mk
+GEN_CERT_WITH_CARD=$(DESTDIR)$(INSTALLTOP)/tassl_demo/ssl/gen_cert_with_card
+GEN_CERT_WITH_HSM=$(DESTDIR)$(INSTALLTOP)/tassl_demo/ssl/gen_cert_with_hsm
 
 install_tass:
 	cp -R tassl_demo $(DESTDIR)$(INSTALLTOP)/
@@ -584,6 +586,20 @@ install_tass:
 	cat $(UKEY_MK_FILE).tmpl             >> $(UKEY_MK_FILE).sh
 	rm -rf $(UKEY_MK_FILE).tmpl
 	chmod u+x $(UKEY_MK_FILE).sh
+	
+	echo "#!/bin/sh"                                                  >  $(GEN_CERT_WITH_CARD).sh
+	echo "export LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(INSTALLTOP)/lib" >> $(GEN_CERT_WITH_CARD).sh
+	echo "OPENSSL_DIR=$(INSTALLTOP)"                                  >> $(GEN_CERT_WITH_CARD).sh
+	cat $(GEN_CERT_WITH_CARD).tmpl                                    >> $(GEN_CERT_WITH_CARD).sh
+	rm -rf $(GEN_CERT_WITH_CARD).tmpl
+	chmod u+x $(GEN_CERT_WITH_CARD).sh 
+	
+	echo "#!/bin/sh"                                                  >  $(GEN_CERT_WITH_HSM).sh
+	echo "export LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(INSTALLTOP)/lib" >> $(GEN_CERT_WITH_HSM).sh
+	echo "OPENSSL_DIR=$(INSTALLTOP)"                                  >> $(GEN_CERT_WITH_HSM).sh
+	cat $(GEN_CERT_WITH_HSM).tmpl                                     >> $(GEN_CERT_WITH_HSM).sh
+	rm -rf $(GEN_CERT_WITH_HSM).tmpl
+	chmod u+x $(GEN_CERT_WITH_HSM).sh 
     
 install_ssldirs:
 	@$(PERL) $(SRCDIR)/util/mkdir-p.pl "$(DESTDIR)$(OPENSSLDIR)/certs"
