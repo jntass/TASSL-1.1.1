@@ -1976,6 +1976,7 @@ MSG_PROCESS_RETURN tls_process_server_certificate(SSL *s, PACKET *pkt)
                         SSL_R_UNABLE_TO_FIND_ENC_CERT);
             goto err;
         }
+	X509_up_ref(x_enc);
 
         /* Build encrypt certificate chain */
         if ((sk_enc = sk_X509_new_null()) == NULL) {
@@ -2064,7 +2065,6 @@ MSG_PROCESS_RETURN tls_process_server_certificate(SSL *s, PACKET *pkt)
         X509_free(s->session->peer_enc);
         X509_up_ref(x_enc);
         s->session->peer_enc = x_enc;
-        x_enc = NULL;
     }
 
     /* Save the current hash state for when we receive the CertificateVerify */

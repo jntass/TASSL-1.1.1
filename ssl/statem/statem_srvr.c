@@ -4045,6 +4045,8 @@ MSG_PROCESS_RETURN tls_process_client_certificate(SSL *s, PACKET *pkt)
                 }
             }
 #endif
+	    if(x_enc)
+              X509_up_ref(x_enc);
             if (!x_enc && s->s3->tmp.new_cipher->algorithm_mkey & SSL_kSM2DH) {
                 SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_TLS_PROCESS_CLIENT_CERTIFICATE,
                             SSL_R_UNABLE_TO_FIND_ENC_CERT);
@@ -4123,7 +4125,6 @@ MSG_PROCESS_RETURN tls_process_client_certificate(SSL *s, PACKET *pkt)
         X509_free(s->session->peer_enc);
         X509_up_ref(x_enc);
         s->session->peer_enc = x_enc;
-        x_enc = NULL;
     }
     sk = NULL;
 
