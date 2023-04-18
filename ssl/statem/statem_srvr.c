@@ -4045,7 +4045,7 @@ MSG_PROCESS_RETURN tls_process_client_certificate(SSL *s, PACKET *pkt)
                 }
             }
 #endif
-	    if(x_enc)
+            if(x_enc)
               X509_up_ref(x_enc);
             if (!x_enc && s->s3->tmp.new_cipher->algorithm_mkey & SSL_kSM2DH) {
                 SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_TLS_PROCESS_CLIENT_CERTIFICATE,

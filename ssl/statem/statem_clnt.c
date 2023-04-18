@@ -1976,7 +1976,7 @@ MSG_PROCESS_RETURN tls_process_server_certificate(SSL *s, PACKET *pkt)
                         SSL_R_UNABLE_TO_FIND_ENC_CERT);
             goto err;
         }
-	X509_up_ref(x_enc);
+        X509_up_ref(x_enc);
 
         /* Build encrypt certificate chain */
         if ((sk_enc = sk_X509_new_null()) == NULL) {

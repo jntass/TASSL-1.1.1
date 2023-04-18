@@ -1333,17 +1333,20 @@ int PKCS7_signatureVerify(BIO *bio, PKCS7 *p7, PKCS7_SIGNER_INFO *si,
             ret = -1;
             goto err;
         }
-        
-        if (EC_GROUP_get_curve_name(EC_KEY_get0_group(EVP_PKEY_get0_EC_KEY(pkey))) == NID_sm2)
-        {
-            /*Need Set SM2 Sign And Verify Extra Data: Add Message Z*/
-            unsigned char ex_dgst[EVP_MAX_MD_SIZE];
-            size_t ex_dgstlen = EVP_MAX_MD_SIZE;
 
-            if (!ECDSA_sm2_get_Z(EVP_PKEY_get0_EC_KEY(pkey), EVP_get_digestbynid(md_type), NULL, 0, ex_dgst, &ex_dgstlen))
-                goto err;
-            if (!EVP_DigestUpdate(mdc_tmp, ex_dgst, ex_dgstlen))
-                goto err;
+        if (EVP_PKEY_get0_EC_KEY(pkey))
+        {
+            if (EC_GROUP_get_curve_name(EC_KEY_get0_group(EVP_PKEY_get0_EC_KEY(pkey))) == NID_sm2)
+            {
+                /*Need Set SM2 Sign And Verify Extra Data: Add Message Z*/
+                unsigned char ex_dgst[EVP_MAX_MD_SIZE];
+                size_t ex_dgstlen = EVP_MAX_MD_SIZE;
+
+                if (!ECDSA_sm2_get_Z(EVP_PKEY_get0_EC_KEY(pkey), EVP_get_digestbynid(md_type), NULL, 0, ex_dgst, &ex_dgstlen))
+                  goto err;
+                if (!EVP_DigestUpdate(mdc_tmp, ex_dgst, ex_dgstlen))
+                  goto err;
+            }
         }
         EVP_PKEY_free(pkey);
 #endif
