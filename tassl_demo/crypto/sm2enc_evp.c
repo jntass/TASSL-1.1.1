@@ -65,25 +65,23 @@
 
 int b2s(char *bin, char *outs)
 {
-        int i = 0;
-        char tmpbuf[4];
-        int iRet = 0;
-        char *ptr = bin;
-        for(i = 0; i<strlen(bin)/2; i++){
-                memset(tmpbuf, 0x00, sizeof(tmpbuf));
-                memcpy(tmpbuf, ptr, 2);
-                ptr += 2;
-                iRet = strtol(tmpbuf, NULL, 16);
-                #ifndef NO_DEBUG
-                //printf("the iRet =[%d]\n", iRet);
-                #endif
+    int i = 0;
+    char tmpbuf[4];
+    int iRet = 0;
+    char *ptr = bin;
+    for(i = 0; i<strlen(bin)/2; i++){
+        memset(tmpbuf, 0x00, sizeof(tmpbuf));
+        memcpy(tmpbuf, ptr, 2);
+        ptr += 2;
+        iRet = strtol(tmpbuf, NULL, 16);
+#ifndef NO_DEBUG
+        //printf("the iRet =[%d]\n", iRet);
+#endif
 
-                memset(outs++, iRet, 1);
-        }
-        return i;
+        memset(outs++, iRet, 1);
+    }
+    return i;
 }
-
-
 
 EC_KEY *CalculateKey(const EC_GROUP *ec_group, const char *privkey_hex_string)
 {
@@ -161,12 +159,12 @@ err:
 
 int main(int argc, char *argv[])
 {
-	EVP_PKEY *sm2key = NULL;
-	EC_GROUP *sm2group = NULL;
-    	EVP_PKEY_CTX *pctx = NULL;
-	size_t outlen;
-	unsigned char *out = NULL;
-	int retval;
+    EVP_PKEY *sm2key = NULL;
+    EC_GROUP *sm2group = NULL;
+    EVP_PKEY_CTX *pctx = NULL;
+    size_t outlen;
+    unsigned char *out = NULL;
+    int retval;
 
 	if (argc < 4)
 	{
@@ -192,14 +190,14 @@ int main(int argc, char *argv[])
 	{
 	    /*Encrypt*/
     	EC_KEY *tmp = CalculatePubKey((const EC_GROUP *)sm2group, argv[2]);
-
 		if (!tmp)
 		{
 			printf("Error Of Calculate SM2 Public Key.\n");
 			goto err;
 		}
-        
-    	EVP_PKEY_assign_SM2_KEY(sm2key, tmp);
+       
+    	EVP_PKEY_assign_EC_KEY(sm2key, tmp);
+        EVP_PKEY_set_alias_type(sm2key, NID_sm2);
     	
     	pctx = EVP_PKEY_CTX_new(sm2key, NULL);
     	if (!pctx)
@@ -213,12 +211,6 @@ int main(int argc, char *argv[])
         	printf("Error Of EVP_PKEY_encrypt_init.\n");
         	goto err;
     	}
-    	
-    	/*Set SM2 Encrypt EVP_MD. If it not set, SM2 default is EVP_sm3(), Other curve default is sha1*/
-    	EVP_PKEY_CTX_ctrl(pctx, -1, EVP_PKEY_OP_TYPE_CRYPT, EVP_PKEY_CTRL_MD, 0, (void *)EVP_sm3());
-    	
-    	/*Set sm2 encdata format, 0 for ASN1(default), 1 for C1C3C2*/
-    	/*EVP_PKEY_CTX_set_sm2_encdata_format(ctx, 1);*/
     	
     	/*Calculate Cipher Text Length*/
     	if (EVP_PKEY_encrypt(pctx, NULL, &outlen, (const unsigned char *)argv[3], (size_t)strlen(argv[3])) < 0)
@@ -260,7 +252,8 @@ int main(int argc, char *argv[])
 			goto err;
 		}
         
-    	EVP_PKEY_assign_SM2_KEY(sm2key, tmp);
+    	EVP_PKEY_assign_EC_KEY(sm2key, tmp);
+        EVP_PKEY_set_alias_type(sm2key, NID_sm2);
     	        
     	pctx = EVP_PKEY_CTX_new(sm2key, NULL);
     	if (!pctx)
@@ -275,9 +268,6 @@ int main(int argc, char *argv[])
         	goto err;
     	}
     	
-    	/*Set SM2 Encrypt EVP_MD. If it not set, SM2 default is EVP_sm3(), Other curve default is sha1*/
-    	EVP_PKEY_CTX_ctrl(pctx, -1, EVP_PKEY_OP_TYPE_CRYPT, EVP_PKEY_CTRL_MD, 0, (void *)EVP_sm3());
-    	
     	in = OPENSSL_malloc(inlen);
     	if (!in)
     	{
@@ -286,11 +276,8 @@ int main(int argc, char *argv[])
     	}
 
     	//hex2bin((const unsigned char *)argv[3], inlen * 2, in);
-	b2s(argv[3], in);
+	    b2s(argv[3], in);
 
-    	/*Set sm2 encdata format, 0 for ASN1(default), 1 for C1C3C2*/
-    	/*EVP_PKEY_CTX_set_sm2_encdata_format(ctx, 1);*/
-    	
     	/*Calculate plain text length*/
     	if (EVP_PKEY_decrypt(pctx, NULL, &outlen, (const unsigned char *)in, inlen) < 0)
     	{
@@ -321,6 +308,7 @@ int main(int argc, char *argv[])
 		/*for (retval = 0; retval < outlen; retval++)
 		    printf("%02X", out[retval] & 0xff);
 		printf("]\n");*/
+        OPENSSL_free(in);
 	}
 	else
 	{

@@ -61,8 +61,6 @@
 #include <string.h>
 #include "openssl/evp.h"
 #include "openssl/sm2.h"
-#include "crypto/include/internal/evp_int.h"
-#include "crypto/evp/evp_locl.h"
 
 int main(int argc, char *argv[])
 {
@@ -115,6 +113,7 @@ int main(int argc, char *argv[])
         printf("Generate SM2 key error.\n");
         goto err;
     }
+    EVP_PKEY_set_alias_type(sm2key, NID_sm2);
     
     /*OUTPUT EVP PKEY*/
     len = i2d_PrivateKey(sm2key, &out);
@@ -131,7 +130,7 @@ int main(int argc, char *argv[])
 
     /*Calculate Z value*/
     len = sizeof(digest);
-    if (!ECDSA_sm2_get_Z(sm2key->pkey.ec, NULL, NULL, 0, digest, &len))
+    if (!ECDSA_sm2_get_Z(EVP_PKEY_get0_EC_KEY(sm2key), NULL, NULL, 0, digest, &len))
     {
         printf("Calculate Z value Error.\n");
         goto err;
@@ -143,7 +142,6 @@ int main(int argc, char *argv[])
     printf("]\n");
 
     /*Calculate DIGEST*/
-    //EVP_MD_CTX_init(md_ctx_ptr);
     md_ctx = EVP_MD_CTX_new();
     if (md_ctx == NULL) {
         printf("EVP_MD_CTX_new() fail!\n");
@@ -202,6 +200,7 @@ int main(int argc, char *argv[])
 err:
     if (sm2key) EVP_PKEY_free(sm2key);
     if (pctx) EVP_PKEY_CTX_free(pctx);
+    if (md_ctx) EVP_MD_CTX_free(md_ctx);
     if (out) OPENSSL_free(out);
 
     return 0;

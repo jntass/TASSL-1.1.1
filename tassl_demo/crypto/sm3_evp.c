@@ -1,8 +1,9 @@
+/* crypto/sm3/sm3test.c */
 /*
  * Written by caichenghang for the TaSSL project.
  */
 /* ====================================================================
- * Copyright (c) 2016 - 2023 Beijing JN TASS Technology Co.,Ltd.  All
+ * Copyright (c) 2016 - 2018 Beijing JN TASS Technology Co.,Ltd.  All 
  * rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -19,7 +20,7 @@
  *
  * 3. All advertising materials mentioning features or use of this
  *    software must display the following acknowledgment:
- *    "This product includes software developed by Beijing JN TASS
+ *    "This product includes software developed by Beijing JN TASS 
  *    Technology Co.,Ltd. TaSSL Project.(http://www.tass.com.cn/)"
  *
  * 4. The name "TaSSL Project" must not be used to endorse or promote
@@ -33,7 +34,7 @@
  *
  * 6. Redistributions of any form whatsoever must retain the following
  *    acknowledgment:
- *    "This product includes software developed by Beijing JN TASS
+ *    "This product includes software developed by Beijing JN TASS 
  *    Technology Co.,Ltd. TaSSL Project.(http://www.tass.com.cn/)"
  *
  * THIS SOFTWARE IS PROVIDED BY THE TASSL PROJECT ``AS IS'' AND ANY
@@ -57,64 +58,33 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
+#include <unistd.h>
+#include <signal.h>
 #include "openssl/evp.h"
-#include "openssl/bn.h"
-#include "openssl/ec.h"
-#include "openssl/sm2.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char **argv)
 {
-    const EC_GROUP *sm2group = NULL;
-    EC_KEY *sm2key = NULL;
-    char *out = NULL;
-    size_t len;
-    int loop;
-    
-    sm2key = EC_KEY_new_by_curve_name(OBJ_sn2nid("SM2"));
-    /*
-      OR
-    sm2key = EC_KEY_new_by_curve_name(OBJ_sn2nid("sm2"));
-      OR
-    sm2key = EC_KEY_new_by_curve_name(NID_sm2);
-    */
-    if (!sm2key)
-    {
-        printf("Create SM2 Key Object error.\n");
-        goto err;
-    }
-    
-    if (EC_KEY_generate_key(sm2key) == 0)
-    {
-        printf("Error Of Generate SM2 Key.\n");
-        goto err;
-    }
-    
-    sm2group = EC_KEY_get0_group(sm2key);
-    
-    /*Output SM2 Key*/
-    out = BN_bn2hex(EC_KEY_get0_private_key(sm2key));
-    if (!out)
-    {
-        printf("Error Of Output SM2 Private key.\n");
-        goto err;
-    }
+    unsigned char digest[32];
+    unsigned int digestlen = 0;
+    EVP_MD_CTX *ctx;
+    char *text = "12345678";
+    int textlen = strlen(text);
+    int i;
 
-    printf("Generated SM2 Private Key: [%s]\n", out);
-    OPENSSL_free(out);
+    memset(digest, 0, sizeof(digest));
 
-    out = EC_POINT_point2hex(sm2group, EC_KEY_get0_public_key(sm2key), POINT_CONVERSION_UNCOMPRESSED, NULL);
-    if (!out)
-    {
-        printf("Error Of Output SM2 Public key.\n");
-        goto err;
-    }
-    printf("              Public Key: [%s]\n", out);
+    ctx = EVP_MD_CTX_new();
+
+    EVP_DigestInit(ctx, EVP_sm3());
+    EVP_DigestUpdate(ctx, text, textlen);
+    EVP_DigestFinal(ctx, digest, &digestlen);
+
+    printf("[%s] SM3 digest: [", text);
+    for (i = 0; i < 32; i++)
+        printf(" %02X", digest[i]);
+    printf(" ]\n");
     
-err:
-    if (sm2key) EC_KEY_free(sm2key);
-    if (out) OPENSSL_free(out);
-
-	return 0;
+    EVP_MD_CTX_free(ctx);
+    return 0;
 }

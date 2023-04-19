@@ -78,22 +78,22 @@ Written by caichenghang for the TaSSL project.
 
 int b2s(char *bin, char *outs)
 {
-        int i = 0;
-        char tmpbuf[4];
-        int iRet = 0;
-        char *ptr = bin;
-        for(i = 0; i<strlen(bin)/2; i++){
-                memset(tmpbuf, 0x00, sizeof(tmpbuf));
-                memcpy(tmpbuf, ptr, 2);
-                ptr += 2;
-                iRet = strtol(tmpbuf, NULL, 16);
-                #ifndef NO_DEBUG
-                //printf("the iRet =[%d]\n", iRet);
-                #endif
-                
-                memset(outs++, iRet, 1);
-        }
-        return i;
+    int i = 0;
+    char tmpbuf[4];
+    int iRet = 0;
+    char *ptr = bin;
+    for(i = 0; i<strlen(bin)/2; i++){
+        memset(tmpbuf, 0x00, sizeof(tmpbuf));
+        memcpy(tmpbuf, ptr, 2);
+        ptr += 2;
+        iRet = strtol(tmpbuf, NULL, 16);
+#ifndef NO_DEBUG
+        //printf("the iRet =[%d]\n", iRet);
+#endif
+
+        memset(outs++, iRet, 1);
+    }
+    return i;
 }
 
 EC_KEY *CalculateKey(const EC_GROUP *ec_group, const char *privkey_hex_string)
@@ -139,11 +139,9 @@ err:
 
 EC_KEY *CalcSm2PublicKey(const char *pubkey_hex_string, char* private_hex_x)
 {
-
-                int bn_len = 0;
+    int bn_len = 0;
     char raw_buf[128] ={0};
     BIGNUM *k = NULL;
-
 
     EC_KEY *ec_key = NULL;
     EC_POINT *pubkey = NULL;
@@ -159,6 +157,7 @@ EC_KEY *CalcSm2PublicKey(const char *pubkey_hex_string, char* private_hex_x)
 
     ec_key = EC_KEY_new();
     if (!ec_key) goto err;
+    
     if (!EC_KEY_set_group(ec_key, ec_group))
     {
         EC_KEY_free(ec_key);
@@ -172,19 +171,29 @@ EC_KEY *CalcSm2PublicKey(const char *pubkey_hex_string, char* private_hex_x)
         ec_key = NULL;
         goto err;
     }
-   
-   
+
     if(private_hex_x != NULL){
         bn_len = b2s((char *)private_hex_x, raw_buf);
         printf("bn_len = [%d]\n", bn_len);
-
-        k = BN_new();
-        if(BN_bin2bn((const unsigned char*)raw_buf, bn_len, k) == NULL){
-                        printf("bin2bn fail!\n");
-                        exit(0);
-
+        if( 32 != bn_len )
+        {
+            EC_KEY_free(ec_key);
+            ec_key = NULL;
+            goto err;
         }
 
+        if (!(k = BN_new()))
+        {        
+            EC_KEY_free(ec_key);
+            ec_key = NULL;
+            goto err;
+        }
+
+        if(BN_bin2bn((const unsigned char*)raw_buf, bn_len, k) == NULL){
+            EC_KEY_free(ec_key);
+            ec_key = NULL;
+            goto err;
+        }
 
         if (!EC_KEY_set_private_key(ec_key, k))
         {
@@ -192,18 +201,15 @@ EC_KEY *CalcSm2PublicKey(const char *pubkey_hex_string, char* private_hex_x)
             ec_key = NULL;
             goto err;
         }
-
     }
 
-
-
 err:
+    if (k) BN_free(k);
     if (pubkey) EC_POINT_free(pubkey);
     if (ec_group) EC_GROUP_free(ec_group);
 
     return ec_key;
 }
-
 
 EC_KEY *CalculatePubKey(const EC_GROUP *ec_group, const char *pub_hex_string)
 {
@@ -248,7 +254,6 @@ int main(int argc, char *argv[])
     char ciphertext_buf[1024] = {0};
     size_t ciphertext_len = 0;
 
-
     if (argc < 4)
     {
         printf("Usage: \n\t%s e|E sm2pubkey text\n", argv[0]);
@@ -280,16 +285,13 @@ int main(int argc, char *argv[])
             goto err;
         }
 	    
-	    
-	  DEBUG_CHAR_HEX(ciphertext_buf, ciphertext_len);
-	  exit(0);
-	  
+	    DEBUG_CHAR_HEX(ciphertext_buf, ciphertext_len);
     }
     else if (!strcasecmp(argv[1], "D"))
     {
         unsigned char *in = NULL;
         size_t inlen = strlen(argv[3]) / 2;
-        
+
         /*Decrypt*/
         sm2key = CalculateKey((const EC_GROUP *)sm2group, argv[2]);
         if (!sm2key)
@@ -297,26 +299,28 @@ int main(int argc, char *argv[])
             printf("Error Of Calculate SM2 Private Key.\n");
             goto err;
         }
-        
+
         in = OPENSSL_malloc(inlen);
         if (!in)
         {
             printf("Error Of Alloc Memory.\n");
             goto err;
         }
-        
+
         ciphertext_len = b2s(argv[3], in);
-	unsigned char ptext_buf[1024] = {0};
-        size_t ptext_len = 0;
+        unsigned char ptext_buf[1024] = {0};
+        size_t ptext_len = sizeof(ptext_buf);
 
-          retval = sm2_decrypt(sm2key, EVP_sm3(), in, ciphertext_len, ptext_buf, &ptext_len);
-                if (!retval)
-          {
-              printf("Error Of sm2_decrypt.\n");
-              goto err;
-          }
-          DEBUG_CHAR_HEX(ptext_buf, ptext_len);
+        retval = sm2_decrypt(sm2key, EVP_sm3(), in, ciphertext_len, ptext_buf, &ptext_len);
+        if (!retval)
+        {
+            OPENSSL_free(in);
+            printf("Error Of sm2_decrypt.\n");
+            goto err;
+        }
 
+        DEBUG_CHAR_HEX(ptext_buf, ptext_len);
+        OPENSSL_free(in);
     }
     else
     {

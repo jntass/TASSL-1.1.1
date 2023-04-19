@@ -2,14 +2,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <openssl/evp.h>
 #include <unistd.h>
-#include "openssl/ssl.h"
-#include "openssl/err.h"
+#include "openssl/evp.h"
 #include "openssl/sm4.h"
-#include "openssl/engine.h"
-
-
 
 int main(int argc, char **argv)
 {
@@ -48,7 +43,6 @@ int main(int argc, char **argv)
     }
     printf("\n");
     
-    
-    EVP_CIPHER_CTX_cleanup(ctx);
+    EVP_CIPHER_CTX_free(ctx);
     return 1;
 }
