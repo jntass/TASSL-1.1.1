@@ -65,49 +65,18 @@
 #include "openssl/sm2.h"
 
 /*TEST KAP*/
-
 int main(int argc, char *argv[])
 {
-	point_conversion_form_t form = POINT_CONVERSION_UNCOMPRESSED;
+    point_conversion_form_t form = POINT_CONVERSION_UNCOMPRESSED;
 	int asn1_flag = OPENSSL_EC_NAMED_CURVE;
-	const EC_POINT *point;
-	BIGNUM *p = NULL, *a = NULL, *b = NULL, *order = NULL, *g = NULL;
 	EC_GROUP *group = NULL;
-	EC_POINT *pubkey = NULL;
-	EC_KEY *ec_key = NULL;
-	EC_KEY *peer_pub_key = NULL, *self_ecdhe_key = NULL, *peer_ecdhe_key = NULL;
+	EC_KEY *A_key = NULL, *B_key = NULL, *A_ecdhe_key = NULL, *B_ecdhe_key = NULL;
 	int loop, retval;
 	unsigned char Buffer[256];
-	size_t keylen;
-
-	int server;
-
-	if (argc < 2)
-	{
-		printf("Usage: %s server_tag(1|0) [key length]\n", argv[0]);
-		exit(0);
-	}
-	else
-	{
-		server = atoi(argv[1]);
-		if (argc > 2)
-			keylen = atoi(argv[2]);
-		else
-			keylen = 48;
-	}
+	size_t keylen = 48;
+    char *tmp = NULL;
 
 	OpenSSL_add_all_algorithms();
-
-	p = BN_new();
-	a = BN_new();
-	b = BN_new();
-	g = BN_new();
-	order = BN_new();
-	if (order == NULL)
-	{
-		printf("Error Of Alloc Bignum\n");
-		goto err;
-	}
 
 	/*首先设定SM2曲线*/
 	/*Tested for NONE SM2DH_TEST*/
@@ -118,52 +87,47 @@ int main(int argc, char *argv[])
 		goto err;
 	}
 
-	ec_key = EC_KEY_new();
-	peer_pub_key = EC_KEY_new();
-	peer_ecdhe_key = EC_KEY_new();
-	self_ecdhe_key = EC_KEY_new();
+	A_key = EC_KEY_new();
+	B_key = EC_KEY_new();
+	A_ecdhe_key = EC_KEY_new();
+	B_ecdhe_key = EC_KEY_new();
 
-	if (!ec_key || !peer_pub_key || !peer_ecdhe_key || !self_ecdhe_key)
+	if (!A_key || !B_key || !A_ecdhe_key || !B_ecdhe_key)
 		goto err;
 
-	if (!EC_KEY_set_group(ec_key, group) || !EC_KEY_set_group(peer_pub_key, group) || !EC_KEY_set_group(peer_ecdhe_key, group) || !EC_KEY_set_group(self_ecdhe_key, group))
+	if (!EC_KEY_set_group(A_key, group) || !EC_KEY_set_group(B_key, group) || !EC_KEY_set_group(A_ecdhe_key, group) || !EC_KEY_set_group(B_ecdhe_key, group))
 		goto err;
 
-	if (!server)
-	{
+    if (EC_KEY_generate_key(A_key) == 0)
+        goto err;
+
+	if (EC_KEY_generate_key(B_key) == 0)
+        goto err;
+    
+    if (EC_KEY_generate_key(A_ecdhe_key) == 0)
+        goto err;
+
+	if (EC_KEY_generate_key(B_ecdhe_key) == 0)
+        goto err;
+	
+    {
 		printf("----------------Test Calculate By Side A:------------------\n");
-		if (EC_KEY_generate_key(ec_key) == 0)
-			goto err;
-
-		if (EC_KEY_generate_key(self_ecdhe_key) == 0)
-			goto err;
-
-		memset(Buffer, 0, (retval = (int)sizeof(Buffer)));
-		printf("Pa : [%s]\n", EC_POINT_point2hex(group, EC_KEY_get0_public_key(ec_key), POINT_CONVERSION_UNCOMPRESSED, NULL));
-		printf("Ra : [%s]\n", EC_POINT_point2hex(group, EC_KEY_get0_public_key(self_ecdhe_key), POINT_CONVERSION_UNCOMPRESSED, NULL));
-
-		printf("Input Pb (hex string) : ");
 		memset(Buffer, 0, sizeof(Buffer));
-		fgets(Buffer, sizeof(Buffer), stdin);
-	        if(Buffer[strlen(Buffer) - 1] == '\n') Buffer[strlen(Buffer) - 1] = '\0';
+        
+        tmp = EC_POINT_point2hex(group, EC_KEY_get0_public_key(A_key), POINT_CONVERSION_UNCOMPRESSED, NULL);
+		printf("Pa : [%s]\n", tmp);
+        OPENSSL_free(tmp); tmp = NULL;
 
-		if (pubkey) EC_POINT_free(pubkey);
-		pubkey = EC_POINT_hex2point(group, (const char *)Buffer, NULL, NULL);
-		EC_KEY_set_public_key(peer_pub_key, pubkey);
-
-		printf("Input Rb (hex string) : ");
-		memset(Buffer, 0, sizeof(Buffer));
-		fgets(Buffer, sizeof(Buffer), stdin);
-	        if(Buffer[strlen(Buffer) - 1] == '\n') Buffer[strlen(Buffer) - 1] = '\0';
-		if (pubkey) EC_POINT_free(pubkey);
-		pubkey = EC_POINT_hex2point(group, (const char *)Buffer, NULL, NULL);
-		EC_KEY_set_public_key(peer_ecdhe_key, pubkey);
+        tmp = EC_POINT_point2hex(group, EC_KEY_get0_public_key(A_ecdhe_key), POINT_CONVERSION_UNCOMPRESSED, NULL);
+		printf("Ra : [%s]\n", tmp);
+        OPENSSL_free(tmp); tmp = NULL;
 
 		memset(Buffer, 0, sizeof(Buffer));
 
-		/*retval = SM2Kap_compute_key(Buffer, 46, 0, "BILL456@YAHOO.COM", 17, "ALICE123@YAHOO.COM", 18, peer_ecdhe_key, self_ecdhe_key, peer_pub_key, ec_key, EVP_sm3());*/
-		retval = SM2Kap_compute_key(Buffer, keylen, 0, NULL, 0, NULL, 0, peer_ecdhe_key, self_ecdhe_key, peer_pub_key, ec_key, EVP_sm3());
-
+		/*retval = SM2Kap_compute_key(Buffer, 46, 0, "BILL456@YAHOO.COM", 17, "ALICE123@YAHOO.COM", 18, B_ecdhe_key, A_ecdhe_key, B_key, A_key, EVP_sm3());*/
+		retval = SM2Kap_compute_key(Buffer, keylen, 0, 
+                SM2_DEFAULT_USERID, strlen(SM2_DEFAULT_USERID), SM2_DEFAULT_USERID, strlen(SM2_DEFAULT_USERID), 
+                B_ecdhe_key, A_ecdhe_key, B_key, A_key, EVP_sm3());
 		if (retval <= 0)
 		{
 			printf("Compute ECDHE Key Error\n");
@@ -174,42 +138,27 @@ int main(int argc, char *argv[])
 		for (loop = 0; loop < retval; loop++)
 			printf("%02X", Buffer[loop] & 0xff);
 		printf("]\n");
-
 	}
-	else
-	{
+	
+
+    {
 		printf("----------------Test Calculate By Side B:------------------\n");
-		if (EC_KEY_generate_key(ec_key) == 0)
-			goto err;
-
-		if (EC_KEY_generate_key(self_ecdhe_key) == 0)
-			goto err;
-
-		memset(Buffer, 0, (retval = (int)sizeof(Buffer)));
-		printf("Pb : [%s]\n", EC_POINT_point2hex(group, EC_KEY_get0_public_key(ec_key), POINT_CONVERSION_UNCOMPRESSED, NULL));
-		printf("Rb : [%s]\n", EC_POINT_point2hex(group, EC_KEY_get0_public_key(self_ecdhe_key), POINT_CONVERSION_UNCOMPRESSED, NULL));
-
-		printf("Input Pa (hex string) : ");
 		memset(Buffer, 0, sizeof(Buffer));
-		fgets(Buffer, sizeof(Buffer), stdin);
-	        if(Buffer[strlen(Buffer) - 1] == '\n') Buffer[strlen(Buffer) - 1] = '\0';
-		if (pubkey) EC_POINT_free(pubkey);
-		pubkey = EC_POINT_hex2point(group, (const char *)Buffer, NULL, NULL);
-		EC_KEY_set_public_key(peer_pub_key, pubkey);
+		
+        tmp = EC_POINT_point2hex(group, EC_KEY_get0_public_key(B_key), POINT_CONVERSION_UNCOMPRESSED, NULL);
+        printf("Pb : [%s]\n", tmp);
+        OPENSSL_free(tmp); tmp = NULL;
 
-		printf("Input Ra (hex string) : ");
-		memset(Buffer, 0, sizeof(Buffer));
-		fgets(Buffer, sizeof(Buffer), stdin);
-	        if(Buffer[strlen(Buffer) - 1] == '\n') Buffer[strlen(Buffer) - 1] = '\0';
-		if (pubkey) EC_POINT_free(pubkey);
-		pubkey = EC_POINT_hex2point(group, (const char *)Buffer, NULL, NULL);
-		EC_KEY_set_public_key(peer_ecdhe_key, pubkey);
+        tmp = EC_POINT_point2hex(group, EC_KEY_get0_public_key(B_ecdhe_key), POINT_CONVERSION_UNCOMPRESSED, NULL);
+		printf("Rb : [%s]\n", tmp);
+        OPENSSL_free(tmp); tmp = NULL;
 
 		memset(Buffer, 0, sizeof(Buffer));
 
-    	/*retval = SM2Kap_compute_key(Buffer, keylen, 1, "ALICE123@YAHOO.COM", 18, "BILL456@YAHOO.COM", 17, peer_ecdhe_key, self_ecdhe_key, peer_pub_key, ec_key, EVP_sm3());*/
-		retval = SM2Kap_compute_key(Buffer, keylen, 1, NULL, 0, NULL, 0, peer_ecdhe_key, self_ecdhe_key, peer_pub_key, ec_key, EVP_sm3());
-
+    	/*retval = SM2Kap_compute_key(Buffer, keylen, 1, "ALICE123@YAHOO.COM", 18, "BILL456@YAHOO.COM", 17, A_ecdhe_key, B_ecdhe_key, A_key, B_key, EVP_sm3());*/
+		retval = SM2Kap_compute_key(Buffer, keylen, 1, 
+                SM2_DEFAULT_USERID, strlen(SM2_DEFAULT_USERID), SM2_DEFAULT_USERID, strlen(SM2_DEFAULT_USERID), 
+                A_ecdhe_key, B_ecdhe_key, A_key, B_key, EVP_sm3());
 		if (retval <= 0)
 		{
 			printf("Compute ECDHE Key Error\n");
@@ -220,26 +169,14 @@ int main(int argc, char *argv[])
 		for (loop = 0; loop < retval; loop++)
 			printf("%02X", Buffer[loop] & 0xff);
 		printf("]\n");
-
 	}
 
 err:
-	if (ec_key) EC_KEY_free(ec_key);
-	if (peer_pub_key) EC_KEY_free(peer_pub_key);
-	if (peer_ecdhe_key) EC_KEY_free(peer_ecdhe_key);
-	if (self_ecdhe_key) EC_KEY_free(self_ecdhe_key);
-	if (p) BN_free(p);
-	if (a) BN_free(a);
-	if (b) BN_free(b);
-	if (g) BN_free(g);
-	if (order) BN_free(order);
+    if (tmp) OPENSSL_free(tmp);
+	if (A_key) EC_KEY_free(A_key);
+	if (B_key) EC_KEY_free(B_key);
+	if (A_ecdhe_key) EC_KEY_free(A_ecdhe_key);
+	if (B_ecdhe_key) EC_KEY_free(B_ecdhe_key);
 	if (group) EC_GROUP_free(group);
-	if (pubkey) EC_POINT_free(pubkey);
-
-	CRYPTO_cleanup_all_ex_data();
-
 	return 0;
 }
-
-
-

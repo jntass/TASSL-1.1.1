@@ -2,7 +2,7 @@
  * Written by caichenghang for the TaSSL project.
  */
 /* ====================================================================
- * Copyright (c) 2016 - 2018 Beijing JN TASS Technology Co.,Ltd.  All
+ * Copyright (c) 2016 - 2023 Beijing JN TASS Technology Co.,Ltd.  All
  * rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -103,6 +103,7 @@ int main(int argc, char *argv[])
 
     printf("Generated SM2 Private Key: [%s]\n", out);
     OPENSSL_free(out);
+
     out = EC_POINT_point2hex(sm2group, EC_KEY_get0_public_key(sm2key), POINT_CONVERSION_UNCOMPRESSED, NULL);
     if (!out)
     {

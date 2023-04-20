@@ -61,54 +61,30 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
-
-#include "crypto/include/internal/sm3.h"
-
-int run;
-
-void time_out(int sig)
-{
-        signal(SIGALRM, time_out);
-        run = 0;
-}
-
-const char *test1digest = "\x66\xC7\xF0\xF4\x62\xEE\xED\xD9\xD1\xF2\xD4\x6B\xDC\x10\xE4\xE2\x41\x67\xC4\x87\x5C\xF2\xF7\xA2\x29\x7D\xA0\x2B\x8F\x4B\xA8\xE0";
-const char *test2digest = "\xDE\xBE\x9F\xF9\x22\x75\xB8\xA1\x38\x60\x48\x89\xC1\x8E\x5A\x4D\x6F\xDB\x70\xE5\x38\x7E\x57\x65\x29\x3D\xCB\xA3\x9C\x0C\x57\x32";
+#include "openssl/evp.h"
 
 int main(int argc, char **argv)
 {
-        int i;
-        unsigned char digest[32];
+    unsigned char digest[32];
+    unsigned int digestlen = 0;
+    EVP_MD_CTX *ctx;
+    char *text = "12345678";
+    int textlen = strlen(text);
+    int i;
 
-        signal(SIGALRM, time_out);
-        memset(digest, 0, sizeof(digest));
-        SM3((unsigned char *)"abc", 3, digest);
-        printf("SM3 Test1 verifid: [%s]\n", ((!memcmp(digest, test1digest, 32)) ? "OK" : "ER"));
-        printf("abc SM3 digest: [");
-        for (i = 0; i < 32; i++)
-                printf(" %02X", digest[i]);
+    memset(digest, 0, sizeof(digest));
 
-        printf(" ]\ni===================================================\n");
-	exit(0);
-        memset(digest, 0, sizeof(digest));
-        SM3((unsigned char *)"abcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd", 64, digest);
-        printf("SM3 Test2 verifid: [%s]\n", ((!memcmp(digest, test2digest, 32)) ? "OK" : "ER"));
-        printf("Test 2 Digest: [");
-        for (i = 0; i < 32; i++)
-                printf(" %02X", digest[i]);
+    ctx = EVP_MD_CTX_new();
 
-        printf(" ]\n");
+    EVP_DigestInit(ctx, EVP_sm3());
+    EVP_DigestUpdate(ctx, text, textlen);
+    EVP_DigestFinal(ctx, digest, &digestlen);
 
-        printf("Now test 20 seconds encrypt ...\n");
-        i = 0;
-        alarm(20);
-        for (run = 1; run; i++)
-                SM3((unsigned char *)"12324524alsdkf", 12, digest);
-
-        printf("SM3 digest times in 20 seconds: [%ld]\n", i);
-
-        return 0;
-
+    printf("[%s] SM3 digest: [", text);
+    for (i = 0; i < 32; i++)
+        printf(" %02X", digest[i]);
+    printf(" ]\n");
+    
+    EVP_MD_CTX_free(ctx);
+    return 0;
 }
-
-
