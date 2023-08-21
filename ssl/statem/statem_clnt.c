@@ -3212,7 +3212,7 @@ static int tls_construct_cke_sm2(SSL *s, WPACKET *pkt)
     }
     
     pkey = X509_get0_pubkey(s->session->peer_enc);
-    if (EVP_PKEY_get0_EC_KEY(pkey) == NULL) {
+    if ((pkey == NULL) || (EVP_PKEY_get0_EC_KEY(pkey) == NULL)) {
         SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_TLS_CONSTRUCT_CKE_SM2,
                  ERR_R_INTERNAL_ERROR);
         return 0;
