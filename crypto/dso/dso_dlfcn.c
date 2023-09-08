@@ -79,13 +79,21 @@ DSO_METHOD *DSO_METHOD_openssl(void)
 #   define DLOPEN_FLAG DL_LAZY
 #  else
 #   ifdef RTLD_NOW
-#    define DLOPEN_FLAG (RTLD_NOW | RTLD_DEEPBIND)
+#    ifdef RTLD_DEEPBIND
+#     define DLOPEN_FLAG (RTLD_NOW | RTLD_DEEPBIND)
+#    else
+#     define DLOPEN_FLAG (RTLD_NOW)
+#    endif
 #   else
 #    define DLOPEN_FLAG 0
 #   endif
 #  endif
 # else
-#  define DLOPEN_FLAG (RTLD_NOW | RTLD_DEEPBIND)  /* Hope this works everywhere else */
+#  ifdef RTLD_DEEPBIND
+#   define DLOPEN_FLAG (RTLD_NOW | RTLD_DEEPBIND)  /* Hope this works everywhere else */
+#  else
+#   define DLOPEN_FLAG (RTLD_NOW)  /* Hope this works everywhere else */
+#  endif
 # endif
 
 /*
