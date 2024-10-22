@@ -161,8 +161,10 @@ BIO *SM2_Enveloped_Key_dataDecode(SM2_Enveloped_Key *sm2evpkey, EVP_PKEY *pkey )
 
     if (EVP_CipherInit_ex(evp_ctx, evp_cipher, NULL, NULL, NULL, 0) <= 0)
       goto err;
-    if (EVP_CIPHER_asn1_to_param(evp_ctx, enc_alg->parameter) < 0)
-      goto err;
+    
+    if( ASN1_TYPE_get(enc_alg->parameter) != V_ASN1_NULL )
+      if (EVP_CIPHER_asn1_to_param(evp_ctx, enc_alg->parameter) < 0)
+        goto err;
     
     if (eklen != EVP_CIPHER_CTX_key_length(evp_ctx))
     {
