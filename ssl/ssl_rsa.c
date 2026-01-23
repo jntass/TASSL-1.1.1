@@ -347,10 +347,12 @@ static int ssl_set_cert(CERT *c, X509 *x)
 
     if (SSL_PKEY_SM2 == i) {
         if (x && (X509_get_extension_flags(x) & EXFLAG_KUSAGE) && 
-                    (X509_get_key_usage(x) & X509v3_KU_GM_SIGN)) 
+                    (X509_get_key_usage(x) & X509v3_KU_GM_SIGN) &&
+                    (c->pkeys[SSL_PKEY_SM2].x509 == NULL))
           i = SSL_PKEY_SM2; /* GMTLS sign certificate */
         else if (x && (X509_get_extension_flags(x) & EXFLAG_KUSAGE) && 
-                    (X509_get_key_usage(x) & X509v3_KU_GM_ENC)) 
+                    (X509_get_key_usage(x) & X509v3_KU_GM_ENC) &&
+                    (c->pkeys[SSL_PKEY_SM2_ENC].x509 == NULL))
           i = SSL_PKEY_SM2_ENC; /* GMTLS encrypt certificate */
         else 
         {
