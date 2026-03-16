@@ -5044,7 +5044,7 @@ int ssl_derive_SM2(SSL *s, EVP_PKEY *privkey, EVP_PKEY *pubkey,  int gensecret)
                 1 != EVP_PKEY_CTX_set1_peer_ekey(pctx, pubkey)) {
         SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_SSL_DERIVE_SM2,
                     ERR_R_INTERNAL_ERROR);
-        return 0;
+        goto err;
     }
 
     local_e_sm4 = ENGINE_get_cipher_engine(NID_sm4_cbc);        //如果加载了SM4引擎，则协商密文的premasterkey；如果没有加载则协商明文的premasterkey

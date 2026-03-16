@@ -242,7 +242,7 @@ int tls_construct_cert_verify(SSL *s, WPACKET *pkt)
     unsigned char tls13tbs[TLS13_TBS_PREAMBLE_SIZE + EVP_MAX_MD_SIZE];
     const SIGALG_LOOKUP *lu = s->s3->tmp.sigalg;
     unsigned char cert_verify_md[32];
-    EVP_MD_CTX *md_ctx;
+    EVP_MD_CTX *md_ctx = NULL;
 
     if (lu == NULL || s->s3->tmp.cert == NULL) {
         SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_TLS_CONSTRUCT_CERT_VERIFY,
@@ -271,12 +271,16 @@ int tls_construct_cert_verify(SSL *s, WPACKET *pkt)
     }
 
     if (s->version == SM1_1_VERSION) {
-        md_ctx = EVP_MD_CTX_new();
-        EVP_DigestInit(md_ctx, EVP_sm3());
-        EVP_DigestUpdate(md_ctx, (const void *)hdata, hdatalen);
-        EVP_DigestFinal(md_ctx, cert_verify_md, (unsigned int *)&hdatalen);
-        if(md_ctx != NULL)
-          EVP_MD_CTX_free(md_ctx);
+        if ((md_ctx = EVP_MD_CTX_new()) == NULL ||
+            EVP_DigestInit(md_ctx, EVP_sm3()) <= 0 ||
+            EVP_DigestUpdate(md_ctx, (const void *)hdata, hdatalen) <= 0 ||
+            EVP_DigestFinal(md_ctx, cert_verify_md, (unsigned int *)&hdatalen) <= 0) {
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_TLS_CONSTRUCT_CERT_VERIFY,
+                     ERR_R_MALLOC_FAILURE);
+            goto err;
+        }
+
+        EVP_MD_CTX_free(md_ctx);
         hdata = cert_verify_md;
     }
 
@@ -371,6 +375,7 @@ int tls_construct_cert_verify(SSL *s, WPACKET *pkt)
  err:
     OPENSSL_free(sig);
     EVP_MD_CTX_free(mctx);
+    EVP_MD_CTX_free(md_ctx);
     if ((SSL_IS_TLS13(s) || SSL_IS_DTLS13(s)) && pkey != NULL && EVP_PKEY_id(pkey) == EVP_PKEY_SM2)
         EVP_PKEY_CTX_free(pctx);
     return 0;
@@ -1203,7 +1208,7 @@ static int ssl_add_sm2_cert_chain(SSL *s, WPACKET *pkt, CERT_PKEY *cpk, CERT_PKE
             }
         }
     }
-   
+    
 #ifdef ENC_CERT_LAST
     if ((enc_cpk != NULL) && (enc_cpk->x509 != NULL)) {
         if (!ssl_add_cert_to_wpacket(s, pkt, enc_cpk->x509, 0))

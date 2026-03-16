@@ -654,7 +654,8 @@ int kdf_gmt003_2012(unsigned char *out, size_t outlen, const unsigned char *Z, s
     {
         unsigned char dgst[EVP_MAX_MD_SIZE];
 
-        EVP_DigestInit(mctx, md);
+        if (!EVP_DigestInit(mctx, md))
+            goto err;
         ctr[0] = (unsigned char)((counter >> 24) & 0xFF);
         ctr[1] = (unsigned char)((counter >> 16) & 0xFF);
         ctr[2] = (unsigned char)((counter >> 8) & 0xFF);
